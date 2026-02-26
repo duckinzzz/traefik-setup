@@ -1,0 +1,60 @@
+tls:
+  certificates:
+    - certFile: /etc/letsencrypt/live/EXAMPLE.ru/fullchain.pem
+      keyFile: /etc/letsencrypt/live/EXAMPLE.ru/privkey.pem
+
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /etc/letsencrypt/live/EXAMPLE.ru/fullchain.pem
+        keyFile: /etc/letsencrypt/live/EXAMPLE.ru/privkey.pem
+
+http:
+  middlewares:
+    maintenance-errors:
+      errors:
+        status:
+          - "502"
+          - "503"
+          - "504"
+        service: maintenance
+        query: /index.html
+
+  services:
+    maintenance:
+      loadBalancer:
+        passHostHeader: false
+        servers:
+          - url: "http://maintenance:80"
+
+  routers:
+    traefik-dashboard:
+      rule: Host(`EXAMPLE.ru`)
+      entryPoints:
+        - traefik
+      service: api@internal
+      tls: {}
+
+    EXAMPLE-root-fallback:
+      rule: Host(`EXAMPLE.ru`) || Host(`www.EXAMPLE.ru`)
+      entryPoints:
+        - websecure
+      priority: 1
+      service: maintenance
+      tls: {}
+
+    webhook-host-fallback:
+      rule: Host(`webhook.EXAMPLE.ru`)
+      entryPoints:
+        - websecure
+      priority: 1
+      service: maintenance
+      tls: {}
+
+    EXAMPLE-subdomain-fallback:
+      rule: HostRegexp(`^[a-z0-9-]+[.]EXAMPLE[.]ru$`)
+      entryPoints:
+        - websecure
+      priority: 1
+      service: maintenance
+      tls: {}
